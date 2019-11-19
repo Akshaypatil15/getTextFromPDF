@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
+from pandas import DataFrame
 from time import time
 import configparser
 import numpy as np
@@ -159,18 +160,34 @@ class get_text_from_image:
 
 	def write_dict_to_csv(self, ldict_input, lstr_output_csv_path):
 		try:
-			llst_text_to_write = [["xmin", "ymin", "xmax", "ymax", "text"]]
+			llst_text_to_write = []
 			
 			if not os.path.exists(os.path.dirname(lstr_output_csv_path)):
 				os.makedirs(os.path.dirname(lstr_output_csv_path))
 			
 			for idx in range (1, len(ldict_input)):
 				lstr_text = ldict_input[idx]['description']
-				xmin, ymin = list(ldict_input[idx]['boundingPoly']['vertices'][0].values())
-				xmax, ymax = list(ldict_input[idx]['boundingPoly']['vertices'][2].values())
+				xmin, ymin, xmax, ymax = [0]*4
+				
+				if len(ldict_input[idx]['boundingPoly']['vertices'][0].keys()) < 2:
+					if 'x' in ldict_input[idx]['boundingPoly']['vertices'][0].keys():
+						xmin = list(ldict_input[idx]['boundingPoly']['vertices'][0].values())[0]
+					elif 'y' in ldict_input[idx]['boundingPoly']['vertices'][0].keys():
+						ymin = list(ldict_input[idx]['boundingPoly']['vertices'][0].values())[0]
+				else:
+					xmin, ymin = list(ldict_input[idx]['boundingPoly']['vertices'][0].values())
+				
+				if len(ldict_input[idx]['boundingPoly']['vertices'][2].keys()) < 2:
+					if 'x' in ldict_input[idx]['boundingPoly']['vertices'][2].keys():
+						xmax = list(ldict_input[idx]['boundingPoly']['vertices'][2].values())[0]
+					elif 'y' in ldict_input[idx]['boundingPoly']['vertices'][0].keys():
+						ymax = list(ldict_input[idx]['boundingPoly']['vertices'][2].values())[0]
+				else:
+					xmax, ymax = list(ldict_input[idx]['boundingPoly']['vertices'][2].values())
+				
 				llst_text_to_write.append([xmin, ymin, xmax, ymax, lstr_text])
-			llst_text_to_write = np.array(llst_text_to_write)
-			np.savetxt(lstr_output_csv_path, llst_text_to_write, fmt='%s', delimiter=',')
+			df = DataFrame(llst_text_to_write, columns=["xmin", "ymin", "xmax", "ymax", "text"])
+			df.to_csv(lstr_output_csv_path, index=False)
 		except Exception:
 			self.pobj_logger.error("Method Name: write_dict_to_csv(self, ldict_input, lstr_output_csv_path)", exc_info=True)
 			raise
